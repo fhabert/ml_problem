@@ -1,3 +1,4 @@
+from ast import Num
 import numpy as np
 import matplotlib.pyplot as plt
 import random
@@ -6,75 +7,60 @@ class MLP(object):
     def __init__(self, h_nodes, o_nodes, x_data, y_data):
         self.nb_hidden = h_nodes
         self.nb_output = o_nodes
-        self.who = np.array([0.5, 0.5, 0.5])
-        self.wih = np.array([0.5, 0.5, 0.5])
+        self.who = np.array([0.1, 0.1, 0.1])
+        self.wih = np.array([0.1, 0.1, 0.1])
         self.learning_rate = 0.01
         self.dataset = x_data
         self.labels = y_data
-        self.epochs = 1500
-        self.w0 = 0
-        self.w1 = 0
-        self.w2 = 0
+        self.epochs = 2000
         pass
     
-    def activation_func(self, input):
-        if type(input) == np.ndarray:
+    def sigmoid(self, input):
+        if type(input) == list:
             results = []
             for item in input:
-                if item > 0:
-                    results.append(item)
-                else:
-                    results.append(0.01)
+                results.append(1/(1+np.exp(-item)))
             return results
         else:
-            if input > 0:
-                return input
-            return 0.01 
+            return 1/(1+np.exp(-input))
+        
+    def tanh(self, input):
+        N = np.exp(input) - np.exp(-input)
+        D =  np.exp(input) + np.exp(-input)
+        return N/D
     
     def train(self):
         for _ in range(self.epochs):
-            w0_test = 0
-            w1_test = 0
-            w2_test = 0
             for j in range(len(self.dataset)):
-                inputs_hidden = np.dot(self.dataset[j], self.wih)
-                hidden_activation = self.activation_func(inputs_hidden)
-                hidden_outputs = np.dot(hidden_activation, self.who)
-                output = self.activation_func(hidden_outputs)
+                inputs_hidden = self.dataset[j] * self.wih
+                hidden_activation = self.sigmoid(inputs_hidden)
+                hidden_outputs = hidden_activation * self.who
+                output = self.tanh(sum(hidden_outputs))
                 deltas = []
                 for i in range(len(self.who)):
-                    derivative_relu = 1 if output > 0 else 0.01
-                    delta = (self.labels[j] - output) * derivative_relu
+                    diff_tan = 1 - (output ** 2)
+                    delta = (self.labels[j] - output) * diff_tan
                     deltas.append(delta)
                     self.who[i] += self.learning_rate * delta * hidden_activation[i]
                 for i in range(len(self.wih)):
-                    sum_delta = np.sum(np.array([deltas[j] * self.who[j] for j in range(len(self.who))]))
-                    derivative_relu = 1 if hidden_activation[i] > 0 else 0.01
-                    self.wih[i] += self.learning_rate * sum_delta * self.dataset[i]
-                # w0_test += - 2*((self.labels[j] - self.w0*(self.dataset[j]**3) - self.w1*(self.dataset[j]**2) - self.w2*self.dataset[j])) \
-                #             * (self.dataset[j])
-                # w1_test += - 2*((self.labels[j] - self.w0*(self.dataset[j]**3) - self.w1*(self.dataset[j]**2) - self.w2*self.dataset[j])) \
-                #             * (2 * self.dataset[j])
-                # w2_test += - 2*((self.labels[j] - self.w0*(self.dataset[j]**3) - self.w1*(self.dataset[j]**2) - self.w2*self.dataset[j])) \
-                #             * (3 * self.dataset[j]**2)
-            # self.w0 -= self.learning_rate*w0_test
-            # self.w1 -= self.learning_rate*w1_test
-            # self.w2 -= self.learning_rate*w2_test
+                    sum_delta = np.sum(np.array([deltas[k] * self.who[k] for k in range(len(self.who))]))
+                    diff_sig = (1 - hidden_activation[i]) * hidden_activation[i]
+                    self.wih[i] += self.learning_rate * sum_delta * self.dataset[j] * diff_sig
         pass
     
     def query(self, input):
-        input_hidden = np.dot(input, self.wih)
-        hidden_activation = self.activation_func(input_hidden)
-        output = np.dot(hidden_activation, self.who)
+        input_hidden = input * self.wih
+        hidden_activation = self.sigmoid(input_hidden)
+        output = self.tanh(sum(hidden_activation * self.who))
         return output
-        # output = self.w0 * (input ** 3) + self.w1 * (input ** 2) + self.w2 * input
-        # return output
     
     def visualize_result(self, x, y):
         plt.scatter(self.dataset, self.labels, marker="x", color="r")
         plt.plot(x, y, alpha=0.7, color="b")
         plt.show()
-        
+        pass
+    
+
 x = np.arange(-1, 1, 0.05)
 y = []
 norm_noise = np.random.normal(0,0.02,len(x))
