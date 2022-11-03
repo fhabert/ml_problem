@@ -1,4 +1,3 @@
-from ast import Num
 import numpy as np
 import matplotlib.pyplot as plt
 import random
@@ -7,22 +6,29 @@ class MLP(object):
     def __init__(self, h_nodes, o_nodes, x_data, y_data):
         self.nb_hidden = h_nodes
         self.nb_output = o_nodes
-        self.who = np.array([0.1, 0.1, 0.1])
-        self.wih = np.array([0.1, 0.1, 0.1])
+        self.who = np.array([random.random(), random.random(), random.random()])
+        self.wih = np.array([random.random(), random.random(), random.random()])
         self.learning_rate = 0.01
+        self.bias = 0.01
         self.dataset = x_data
         self.labels = y_data
-        self.epochs = 2000
+        self.epochs = 5000
         pass
     
     def sigmoid(self, input):
-        if type(input) == list:
-            results = []
-            for item in input:
-                results.append(1/(1+np.exp(-item)))
-            return results
-        else:
-            return 1/(1+np.exp(-input))
+        results = []
+        for item in input:
+            results.append(1/(1 + np.exp(-item)))
+        return results
+    
+    def leaky_relu(self, input):
+        results = []
+        for item in input:
+            if item > 0:
+                results.append(item)
+            else:
+                results.append(0.01)
+        return results
         
     def tanh(self, input):
         N = np.exp(input) - np.exp(-input)
@@ -32,26 +38,20 @@ class MLP(object):
     def train(self):
         for _ in range(self.epochs):
             for j in range(len(self.dataset)):
-                inputs_hidden = self.dataset[j] * self.wih
+                inputs_hidden = np.dot(self.dataset[j],self.wih) + self.bias
                 hidden_activation = self.sigmoid(inputs_hidden)
-                hidden_outputs = hidden_activation * self.who
-                output = self.tanh(sum(hidden_outputs))
-                deltas = []
-                for i in range(len(self.who)):
-                    diff_tan = 1 - (output ** 2)
-                    delta = (self.labels[j] - output) * diff_tan
-                    deltas.append(delta)
-                    self.who[i] += self.learning_rate * delta * hidden_activation[i]
-                for i in range(len(self.wih)):
-                    sum_delta = np.sum(np.array([deltas[k] * self.who[k] for k in range(len(self.who))]))
-                    diff_sig = (1 - hidden_activation[i]) * hidden_activation[i]
-                    self.wih[i] += self.learning_rate * sum_delta * self.dataset[j] * diff_sig
+                hidden_outputs = np.dot(hidden_activation, self.who)
+                output = self.tanh(hidden_outputs)
+                output_errors = (self.labels[j] - output)**2
+                hidden_errors = np.dot(self.who.T, output_errors)
+                self.who += self.learning_rate * np.dot(output_errors * (1 - output**2), hidden_outputs)
+                self.wih += self.learning_rate * np.dot(hidden_errors * hidden_outputs * (1 - hidden_outputs), self.dataset[j])
         pass
     
     def query(self, input):
-        input_hidden = input * self.wih
+        input_hidden = np.dot(input, self.wih)
         hidden_activation = self.sigmoid(input_hidden)
-        output = self.tanh(sum(hidden_activation * self.who))
+        output = self.tanh(np.dot(hidden_activation, self.who))
         return output
     
     def visualize_result(self, x, y):
@@ -79,5 +79,5 @@ mlp.train()
 for item in test_inputs:
     query_data = mlp.query(item)
     test_y.append(query_data)
-    
+
 mlp.visualize_result(test_inputs, test_y)
