@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 import random
 
 class MLP(object):
@@ -8,11 +9,11 @@ class MLP(object):
         self.nb_output = o_nodes
         self.who = np.array([random.random(), random.random(), random.random()])
         self.wih = np.array([random.random(), random.random(), random.random()])
-        self.learning_rate = 0.01
-        self.bias = 0.01
+        self.bias = np.array([random.random(), random.random(), random.random()])
+        self.learning_rate = 0.05
         self.dataset = x_data
         self.labels = y_data
-        self.epochs = 5000
+        self.epochs = 6000
         pass
     
     def sigmoid(self, input):
@@ -31,27 +32,44 @@ class MLP(object):
         return results
         
     def tanh(self, input):
-        N = np.exp(input) - np.exp(-input)
-        D =  np.exp(input) + np.exp(-input)
-        return N/D
+        if type(input) == np.ndarray:
+            results = []
+            for item in input:
+                N = np.exp(item) - np.exp(-item)
+                D =  np.exp(item) + np.exp(-item)
+                results.append(N/D)
+            return results
+        else:
+            N = np.exp(input) - np.exp(-input)
+            D =  np.exp(input) + np.exp(-input)
+            return N/D
     
     def train(self):
         for _ in range(self.epochs):
             for j in range(len(self.dataset)):
                 inputs_hidden = np.dot(self.dataset[j],self.wih) + self.bias
-                hidden_activation = self.sigmoid(inputs_hidden)
+                hidden_activation = self.tanh(inputs_hidden)
                 hidden_outputs = np.dot(hidden_activation, self.who)
-                output = self.tanh(hidden_outputs)
-                output_errors = (self.labels[j] - output)**2
-                hidden_errors = np.dot(self.who.T, output_errors)
-                self.who += self.learning_rate * np.dot(output_errors * (1 - output**2), hidden_outputs)
-                self.wih += self.learning_rate * np.dot(hidden_errors * hidden_outputs * (1 - hidden_outputs), self.dataset[j])
+                output = hidden_outputs
+                output_errors = (self.labels[j] - output)
+                # hidden_errors = np.dot(self.who, output_errors)
+                who_old = self.who
+                self.who += self.learning_rate * np.dot(output_errors*1, hidden_activation)
+                for i in range(len(self.wih)):
+                    # print(np.dot(self.who, output_errors))
+                    # for k in range(len(self.who)):
+                    delta = who_old[i] * output_errors
+                    self.bias[i] += self.learning_rate * delta * (1-hidden_activation[i]**2)
+                    self.wih[i] += self.learning_rate * delta * self.dataset[j] * (1-hidden_activation[i]**2)
+                    # print(self.who[i], hidden_outputs[i]**2)
+                    # derivative_linear = 1
+                    # self.wih[i] += self.learning_rate * (derivative_linear*self.who[i]) * (1-self.tanh(hidden_activation[i])**2) * self.dataset[j]
         pass
     
     def query(self, input):
         input_hidden = np.dot(input, self.wih)
-        hidden_activation = self.sigmoid(input_hidden)
-        output = self.tanh(np.dot(hidden_activation, self.who))
+        hidden_activation = self.tanh(input_hidden)
+        output = np.dot(hidden_activation, self.who)
         return output
     
     def visualize_result(self, x, y):
