@@ -56,8 +56,6 @@ class MLP(object):
                 who_old = self.who
                 self.who += self.learning_rate * np.dot(output_errors*1, hidden_activation)
                 for i in range(len(self.wih)):
-                    # print(np.dot(self.who, output_errors))
-                    # for k in range(len(self.who)):
                     delta = who_old[i] * output_errors
                     self.bias[i] += self.learning_rate * delta * (1-hidden_activation[i]**2)
                     self.wih[i] += self.learning_rate * delta * self.dataset[j] * (1-hidden_activation[i]**2)
